@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import 'users_management_screen.dart';
+import 'plants_management_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String accessToken;
@@ -130,24 +131,20 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   _buildModernCard(
                     context,
-                    'Monitoreo de Cultivos',
-                    'Supervisa el estado de tus cultivos',
-                    Icons.agriculture_outlined,
-                    AppTheme.secondaryGradient,
+                    'Gestión de Plantas',
+                    'Administra tu inventario de plantas',
+                    Icons.local_florist,
+                    const LinearGradient(
+                      colors: [Color(0xFF43e97b), Color(0xFF38f9d7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Row(
-                            children: [
-                              Icon(Icons.info_outline, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text('Redirigiendo a gestión de cultivos...'),
-                            ],
-                          ),
-                          backgroundColor: AppTheme.info,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PlantsManagementScreen(
+                            accessToken: accessToken,
                           ),
                         ),
                       );
