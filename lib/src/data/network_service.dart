@@ -35,6 +35,32 @@ class NetworkService {
     }
   }
 
+  Future<void> forgotPassword(String email) async {
+    try {
+      final url = Uri.parse('${Constants.baseUrl}${Constants.forgotPasswordEndpoint}');
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'email': email,
+        }),
+      ).timeout(_timeout);
+
+      _handleForgotPasswordResponse(response);
+    } on SocketException {
+      throw NetworkException('Sin conexión a internet. Verifica tu red.');
+    } on HttpException {
+      throw NetworkException('Error de conexión al servidor.');
+    } on FormatException {
+      throw NetworkException('Respuesta inválida del servidor.');
+    } catch (e) {
+      if (e is AppException) {
+        rethrow;
+      }
+      throw UnknownException('Error inesperado: ${e.toString()}');
+    }
+  }
+
   AuthModel _handleAuthResponse(http.Response response) {
     switch (response.statusCode) {
       case 200:
@@ -51,6 +77,28 @@ class NetworkService {
         throw AuthorizationException('No tienes permisos para acceder.');
       case 404:
         throw NetworkException('Servicio no encontrado.');
+      case 500:
+        throw ServerException('Error interno del servidor.');
+      case 502:
+        throw NetworkException('Servidor no disponible.');
+      case 503:
+        throw NetworkException('Servicio temporalmente no disponible.');
+      default:
+        throw NetworkException(
+          'Error del servidor (${response.statusCode})',
+          statusCode: response.statusCode,
+        );
+    }
+  }
+
+  void _handleForgotPasswordResponse(http.Response response) {
+    switch (response.statusCode) {
+      case 200:
+        return;
+      case 400:
+        throw ValidationException('Correo electrónico inválido.');
+      case 404:
+        throw ValidationException('No existe una cuenta con este correo electrónico.');
       case 500:
         throw ServerException('Error interno del servidor.');
       case 502:

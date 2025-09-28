@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/validators.dart';
+import '../../core/exceptions.dart';
+import '../../data/network_service.dart';
 
 class ForgotPasswordModal extends StatefulWidget {
   const ForgotPasswordModal({super.key});
@@ -12,6 +14,8 @@ class ForgotPasswordModal extends StatefulWidget {
 class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _networkService = NetworkService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -19,25 +23,70 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
     super.dispose();
   }
 
-  void _sendRecoveryEmail() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Se han enviado las instrucciones a tu correo'),
-            ],
+  Future<void> _sendRecoveryEmail() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _networkService.forgotPassword(_emailController.text.trim());
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Se han enviado las instrucciones a tu correo'),
+              ],
+            ),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+        );
+      }
+    } catch (e) {
+      String errorMessage = 'Error al enviar el correo de recuperación';
+      
+      if (e is ValidationException) {
+        errorMessage = e.message;
+      } else if (e is NetworkException) {
+        errorMessage = e.message;
+      } else if (e is ServerException) {
+        errorMessage = e.message;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: AppTheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -120,9 +169,18 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: GradientButton(
-                      text: 'Enviar',
-                      onPressed: _sendRecoveryEmail,
-                      icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                      text: _isLoading ? 'Enviando...' : 'Enviar',
+                      onPressed: _isLoading ? null : _sendRecoveryEmail,
+                      icon: _isLoading 
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white, size: 18),
                     ),
                   ),
                 ],
